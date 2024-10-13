@@ -162,9 +162,8 @@ function CanvasElementDetector() {
       const flexBasis = styles.flexBasis;
       const alignItems = parentStyles.alignItems;
       
-      if (flexBasis !== 'auto' && flexBasis !== '0') {
-        height = parseFloat(flexBasis);
-      }
+      // Use the actual computed height instead of flex-basis
+      height = rect.height;
 
       switch (alignSelf !== 'auto' ? alignSelf : alignItems) {
         case 'flex-start':
@@ -177,14 +176,12 @@ function CanvasElementDetector() {
           top = parentRect.top + (parentRect.height - height) / 2;
           break;
         case 'stretch':
-          height = parentRect.height - parseFloat(styles.marginTop) - parseFloat(styles.marginBottom);
-          top = parentRect.top + parseFloat(styles.marginTop);
+          // For stretch, use the actual computed height
+          top = rect.top;
           break;
         default: // 'auto' or inherited
-          if (alignItems === 'stretch') {
-            height = parentRect.height - parseFloat(styles.marginTop) - parseFloat(styles.marginBottom);
-            top = parentRect.top + parseFloat(styles.marginTop);
-          }
+          // Use the actual computed values
+          top = rect.top;
           break;
       }
     }
@@ -318,51 +315,7 @@ function CanvasElementDetector() {
       drawDottedPattern(ctx, x, x + width, y, y + height, false);
     };
 
-    const groupIntoLines = (rects, isRow) => {
-      const lines = [];
-      let currentLine = [];
-      let currentEdge = isRow ? rects[0].rect.top : rects[0].rect.left;
-
-      rects.forEach((rect) => {
-        const edge = isRow ? rect.rect.top : rect.rect.left;
-        if (Math.abs(edge - currentEdge) > 1) {
-          lines.push(currentLine);
-          currentLine = [];
-          currentEdge = edge;
-        }
-        currentLine.push(rect);
-      });
-      if (currentLine.length > 0) {
-        lines.push(currentLine);
-      }
-      return lines;
-    };
-
-    if (isWrap) {
-      // Draw gaps between wrapped lines (darker)
-      const lines = groupIntoLines(childRects, isRow);
-      lines.forEach((line, index) => {
-        if (index < lines.length - 1) {
-          const start = Math.max(
-            ...line.map((r) => (isRow ? r.rect.bottom : r.rect.right))
-          );
-          const end = Math.min(
-            ...lines[index + 1].map((r) => (isRow ? r.rect.top : r.rect.left))
-          );
-          if (end - start >= minGap) {
-            drawFlexGap(
-              isRow ? parentRect.left : start,
-              isRow ? start : parentRect.top,
-              isRow ? parentRect.width : end - start,
-              isRow ? end - start : parentRect.height,
-              true
-            );
-          }
-        }
-      });
-    }
-
-    // Draw gaps between items in each line (lighter)
+    // Draw gaps between items
     for (let i = 0; i < childRects.length - 1; i++) {
       const currentRect = childRects[i].rect;
       const nextRect = childRects[i + 1].rect;
@@ -370,12 +323,12 @@ function CanvasElementDetector() {
 
       if (isRow) {
         gap = nextRect.left - currentRect.right;
-        gapStart = Math.min(currentRect.top, nextRect.top);
-        gapEnd = Math.max(currentRect.bottom, nextRect.bottom);
+        gapStart = Math.min(parentRect.top, currentRect.top, nextRect.top);
+        gapEnd = Math.max(parentRect.bottom, currentRect.bottom, nextRect.bottom);
       } else {
         gap = nextRect.top - currentRect.bottom;
-        gapStart = Math.min(currentRect.left, nextRect.left);
-        gapEnd = Math.max(currentRect.right, nextRect.right);
+        gapStart = Math.min(parentRect.left, currentRect.left, nextRect.left);
+        gapEnd = Math.max(parentRect.right, currentRect.right, nextRect.right);
       }
 
       if (gap >= minGap) {
@@ -395,12 +348,12 @@ function CanvasElementDetector() {
 
     if (isRow) {
       endGap = parentRect.right - lastRect.right;
-      gapStart = lastRect.top;
-      gapEnd = lastRect.bottom;
+      gapStart = Math.min(parentRect.top, lastRect.top);
+      gapEnd = Math.max(parentRect.bottom, lastRect.bottom);
     } else {
       endGap = parentRect.bottom - lastRect.bottom;
-      gapStart = lastRect.left;
-      gapEnd = lastRect.right;
+      gapStart = Math.min(parentRect.left, lastRect.left);
+      gapEnd = Math.max(parentRect.right, lastRect.right);
     }
 
     if (endGap >= minGap) {
