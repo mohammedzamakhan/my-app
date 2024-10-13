@@ -36,3 +36,108 @@
     transform: rotate(360deg);
   }
 }
+
+/* CanvasElementDetector styles */
+.content-container {
+  padding: 1rem;
+}
+
+.main-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.description {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.button-container {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.primary-button, .secondary-button {
+  padding: 0.5rem 1rem;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.primary-button {
+  background-color: #3b82f6;
+}
+
+.primary-button:hover {
+  background-color: #2563eb;
+}
+
+.secondary-button {
+  background-color: #10b981;
+}
+
+.secondary-button:hover {
+  background-color: #059669;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid-box {
+  padding: 1rem;
+  background-color: #f3f4f6;
+  border-radius: 0.25rem;
+  margin: 10px 5px;
+  border: 2px solid black;
+}
+
+.paragraph {
+  color: #374151;
+  max-width: 42rem;
+  line-height: 1.5;
+}
+
+.highlight-span {
+  color: #2563eb;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.canvas-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hover-info {
+  position: absolute;
+  background-color: white;
+  color: #1f2937;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  font-size: 0.875rem;
+  pointer-events: none;
+  border: 1px solid #e5e7eb;
+  max-width: 300px;
+}
+
+.hover-info-tag {
+  font-weight: 500;
+}
+
+.hover-info-classes {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
