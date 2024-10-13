@@ -60,7 +60,7 @@ function CanvasElementDetector() {
         );
 
         [...flexboxElements, ...gridElements].forEach((element) => {
-          // drawBoxModel(ctx, element);
+          drawBoxModel(ctx, element);
         });
       }
     }
@@ -159,6 +159,50 @@ function CanvasElementDetector() {
     });
   };
 
+  const getFlexItemDimensions = (element) => {
+    const rect = element.getBoundingClientRect();
+    const styles = window.getComputedStyle(element);
+    const parentStyles = window.getComputedStyle(element.parentElement);
+    const parentRect = element.parentElement.getBoundingClientRect();
+
+    let top = rect.top;
+    let height = rect.height;
+
+    if (parentStyles.display === 'flex') {
+      const alignSelf = styles.alignSelf;
+      const flexBasis = styles.flexBasis;
+      const alignItems = parentStyles.alignItems;
+      
+      if (flexBasis !== 'auto' && flexBasis !== '0') {
+        height = parseFloat(flexBasis);
+      }
+
+      switch (alignSelf !== 'auto' ? alignSelf : alignItems) {
+        case 'flex-start':
+          top = parentRect.top + parseFloat(styles.marginTop);
+          break;
+        case 'flex-end':
+          top = parentRect.bottom - height - parseFloat(styles.marginBottom);
+          break;
+        case 'center':
+          top = parentRect.top + (parentRect.height - height) / 2;
+          break;
+        case 'stretch':
+          height = parentRect.height - parseFloat(styles.marginTop) - parseFloat(styles.marginBottom);
+          top = parentRect.top + parseFloat(styles.marginTop);
+          break;
+        default: // 'auto' or inherited
+          if (alignItems === 'stretch') {
+            height = parentRect.height - parseFloat(styles.marginTop) - parseFloat(styles.marginBottom);
+            top = parentRect.top + parseFloat(styles.marginTop);
+          }
+          break;
+      }
+    }
+
+    return { top, height };
+  };
+
   const drawBoxModel = (ctx, element) => {
     const rect = element.getBoundingClientRect();
     const styles = window.getComputedStyle(element);
@@ -242,11 +286,14 @@ function CanvasElementDetector() {
 
     // Draw content
     ctx.fillStyle = "rgba(173, 216, 230, 0.5)"; // Light blue
+    
+    const { top: contentTop, height: contentHeight } = getFlexItemDimensions(element);
+    
     ctx.fillRect(
-      rect.left + padding.left,
-      rect.top + padding.top,
-      rect.width - padding.left - padding.right,
-      rect.height - padding.top - padding.bottom
+      rect.left + border.left + padding.left,
+      contentTop + border.top + padding.top,
+      rect.width - border.left - border.right - padding.left - padding.right,
+      contentHeight - border.top - border.bottom - padding.top - padding.bottom
     );
 
     if (
@@ -332,15 +379,24 @@ function CanvasElementDetector() {
     for (let i = 0; i < childRects.length - 1; i++) {
       const currentRect = childRects[i].rect;
       const nextRect = childRects[i + 1].rect;
-      const gap = isRow
-        ? nextRect.left - currentRect.right
-        : nextRect.top - currentRect.bottom;
+      let gap, gapStart, gapEnd;
+
+      if (isRow) {
+        gap = nextRect.left - currentRect.right;
+        gapStart = parentRect.top;
+        gapEnd = parentRect.bottom;
+      } else {
+        gap = nextRect.top - currentRect.bottom;
+        gapStart = parentRect.left;
+        gapEnd = parentRect.right;
+      }
+
       if (gap >= minGap) {
         drawFlexGap(
-          isRow ? currentRect.right : currentRect.left,
-          isRow ? currentRect.top : currentRect.bottom,
-          isRow ? gap : currentRect.width,
-          isRow ? currentRect.height : gap,
+          isRow ? currentRect.right : gapStart,
+          isRow ? gapStart : currentRect.bottom,
+          isRow ? gap : gapEnd - gapStart,
+          isRow ? gapEnd - gapStart : gap,
           false
         );
       }
@@ -348,15 +404,24 @@ function CanvasElementDetector() {
 
     // Draw gap after the last item if it doesn't reach the end
     const lastRect = childRects[childRects.length - 1].rect;
-    const endGap = isRow
-      ? parentRect.right - lastRect.right
-      : parentRect.bottom - lastRect.bottom;
+    let endGap, gapStart, gapEnd;
+
+    if (isRow) {
+      endGap = parentRect.right - lastRect.right;
+      gapStart = parentRect.top;
+      gapEnd = parentRect.bottom;
+    } else {
+      endGap = parentRect.bottom - lastRect.bottom;
+      gapStart = parentRect.left;
+      gapEnd = parentRect.right;
+    }
+
     if (endGap >= minGap) {
       drawFlexGap(
-        isRow ? lastRect.right : lastRect.left,
-        isRow ? lastRect.top : lastRect.bottom,
-        isRow ? endGap : lastRect.width,
-        isRow ? lastRect.height : endGap,
+        isRow ? lastRect.right : gapStart,
+        isRow ? gapStart : lastRect.bottom,
+        isRow ? endGap : gapEnd - gapStart,
+        isRow ? gapEnd - gapStart : endGap,
         false
       );
     }
@@ -482,6 +547,11 @@ function CanvasElementDetector() {
         }
       });
     }
+  };
+
+  const isFlexItem = (element) => {
+    const parentStyles = window.getComputedStyle(element.parentElement);
+    return parentStyles.display === 'flex';
   };
 
   return (
