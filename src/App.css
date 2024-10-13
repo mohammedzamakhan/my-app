@@ -141,3 +141,101 @@
   color: #6b7280;
   font-size: 0.75rem;
 }
+
+/* New Flexbox styles */
+.flex-row-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.flex-column-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.flex-wrap-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.flex-item {
+  background-color: #e5e7eb;
+  padding: 1rem;
+  border-radius: 0.25rem;
+}
+
+.flex-wrap-item {
+  background-color: #d1d5db;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  flex: 1 1 calc(33.333% - 0.5rem);
+}
+
+/* New Grid styles */
+.grid-container-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid-container-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid-item {
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  text-align: center;
+}
+
+/* Additional styles */
+h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* New styles for the partial-width flex wrap example */
+.flex-wrap-container-partial {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.flex-wrap-item-partial {
+  background-color: #d1d5db;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  flex: 0 1 calc(50% - 0.5rem); /* This will make it take up about 50% of the container width */
+}
+
+/* New grid example with an item spanning multiple columns */
+.grid-container-span {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.grid-container-span .grid-item {
+  background-color: #f0f0f0;
+  padding: 20px;
+  text-align: center;
+}
+
+.grid-container-span .span-2 {
+  grid-column: span 2;
+  background-color: #e0e0e0;
+}

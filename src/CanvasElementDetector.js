@@ -50,6 +50,14 @@ function CanvasElementDetector() {
         if (hoveredElement) {
           drawBoxModel(ctx, hoveredElement.element);
         }
+
+        // Draw box model for all flexbox and grid examples
+        // const flexboxElements = document.querySelectorAll('.flex-row-container, .flex-column-container, .flex-wrap-container, .flex-item, .flex-wrap-item, .flex-wrap-container-partial');
+        // const gridElements = document.querySelectorAll('.grid-container-2, .grid-container-3, .grid-item, .grid-container-span');
+
+        // [...flexboxElements, ...gridElements].forEach(element => {
+        //   drawBoxModel(ctx, element);
+        // });
       }
     }
   }, [selectedElements, hoveredElement]);
@@ -192,70 +200,157 @@ function CanvasElementDetector() {
       rect.height - padding.top - padding.bottom
     );
 
-    // Check if the element has children
-    if (element.children.length > 0) {
-      const childRects = Array.from(element.children).map(child => {
-        const rect = child.getBoundingClientRect();
-        const styles = window.getComputedStyle(child);
-        return {
-          left: rect.left - parseInt(styles.marginLeft),
-          right: rect.right + parseInt(styles.marginRight),
-          top: rect.top - parseInt(styles.marginTop),
-          bottom: rect.bottom + parseInt(styles.marginBottom),
-          width: rect.width + parseInt(styles.marginLeft) + parseInt(styles.marginRight)
-        };
-      });
-      
-      childRects.sort((a, b) => a.left - b.left);
-      
+    if (element.children.length > 0 && (styles.display === 'flex' || styles.display === 'grid')) {
+      const childRects = Array.from(element.children).map(child => child.getBoundingClientRect());
       const parentRect = element.getBoundingClientRect();
-      const parentStyles = window.getComputedStyle(element);
-      const parentPaddingLeft = parseInt(parentStyles.paddingLeft);
-      const parentPaddingRight = parseInt(parentStyles.paddingRight);
-      const parentPaddingTop = parseInt(parentStyles.paddingTop);
-      const parentPaddingBottom = parseInt(parentStyles.paddingBottom);
       
       const minGap = 1; // Minimum gap size to draw (in pixels)
-      const parentContentWidth = parentRect.width - parentPaddingLeft - parentPaddingRight;
 
-      let totalChildWidth = 0;
-      childRects.forEach(rect => {
-        totalChildWidth += rect.width;
-      });
-
-      // Only draw dashed lines if there's actually space between children
-      if (totalChildWidth < parentContentWidth) {
-        for (let i = 0; i <= childRects.length; i++) {
-          let startX, endX;
-          
-          if (i === 0) {
-            startX = parentRect.left + parentPaddingLeft;
-            endX = childRects[0].left;
-          } else if (i === childRects.length) {
-            startX = childRects[i - 1].right;
-            endX = parentRect.right - parentPaddingRight;
-          } else {
-            startX = childRects[i - 1].right;
-            endX = childRects[i].left;
-          }
-          
-          if (endX - startX >= minGap) {
-            drawDashedLines(ctx, startX, endX, 
-              parentRect.top + parentPaddingTop, 
-              parentRect.bottom - parentPaddingBottom
-            );
-          }
-        }
+      if (styles.display === 'flex') {
+        drawFlexboxGaps(ctx, childRects, parentRect, styles, minGap);
+      } else if (styles.display === 'grid') {
+        drawGridGaps(ctx, element, styles, minGap);
       }
     }
   };
 
-  const drawDashedLines = (ctx, startX, endX, startY, endY) => {
-    // Semi-transparent purple background
-    ctx.fillStyle = 'rgba(128, 0, 128, 0.3)';
-    ctx.fillRect(startX, startY, endX - startX, endY - startY);
+  const drawFlexboxGaps = (ctx, childRects, parentRect, styles, minGap) => {
+    const isRow = styles.flexDirection.includes('row');
+    const isWrap = styles.flexWrap === 'wrap';
 
-    // Black dots
+    const drawFlexGap = (x, y, width, height, isDarker = false) => {
+      ctx.fillStyle = isDarker ? 'rgba(128, 0, 128, 0.4)' : 'rgba(128, 0, 128, 0.3)';
+      ctx.fillRect(x, y, width, height);
+      drawDottedPattern(ctx, x, x + width, y, y + height, false);
+    };
+
+    const groupIntoLines = (rects, isRow) => {
+      const lines = [];
+      let currentLine = [];
+      let currentEdge = isRow ? rects[0].top : rects[0].left;
+
+      rects.forEach(rect => {
+        const edge = isRow ? rect.top : rect.left;
+        if (Math.abs(edge - currentEdge) > 1) {
+          lines.push(currentLine);
+          currentLine = [];
+          currentEdge = edge;
+        }
+        currentLine.push(rect);
+      });
+      if (currentLine.length > 0) {
+        lines.push(currentLine);
+      }
+      return lines;
+    };
+
+    if (isWrap) {
+      // Draw gaps between wrapped lines (darker)
+      const lines = groupIntoLines(childRects, isRow);
+      lines.forEach((line, index) => {
+        if (index < lines.length - 1) {
+          const start = Math.max(...line.map(r => isRow ? r.bottom : r.right));
+          const end = Math.min(...lines[index + 1].map(r => isRow ? r.top : r.left));
+          if (end - start >= minGap) {
+            drawFlexGap(
+              isRow ? parentRect.left : start,
+              isRow ? start : parentRect.top,
+              isRow ? parentRect.width : end - start,
+              isRow ? end - start : parentRect.height,
+              true
+            );
+          }
+        }
+      });
+    }
+
+    // Draw gaps between items in each line (lighter)
+    childRects.forEach((rect, index) => {
+      if (index < childRects.length - 1) {
+        const nextRect = childRects[index + 1];
+        const gap = isRow ? nextRect.left - rect.right : nextRect.top - rect.bottom;
+        if (gap >= minGap) {
+          drawFlexGap(
+            isRow ? rect.right : rect.left,
+            isRow ? rect.top : rect.bottom,
+            isRow ? gap : rect.width,
+            isRow ? rect.height : gap,
+            false
+          );
+        }
+      }
+    });
+
+    // Draw gap after the last item if it doesn't reach the end
+    const lastRect = childRects[childRects.length - 1];
+    const endGap = isRow ? parentRect.right - lastRect.right : parentRect.bottom - lastRect.bottom;
+    if (endGap >= minGap) {
+      drawFlexGap(
+        isRow ? lastRect.right : lastRect.left,
+        isRow ? lastRect.top : lastRect.bottom,
+        isRow ? endGap : lastRect.width,
+        isRow ? lastRect.height : endGap,
+        false
+      );
+    }
+  };
+
+  const drawGridGaps = (ctx, element, styles, minGap) => {
+    const computedStyle = window.getComputedStyle(element);
+    const parentRect = element.getBoundingClientRect();
+    
+    // Get the actual computed grid tracks
+    const columnTracks = computedStyle.gridTemplateColumns.split(' ');
+    const rowTracks = computedStyle.gridTemplateRows.split(' ');
+    const columnGap = parseFloat(computedStyle.columnGap) || 0;
+    const rowGap = parseFloat(computedStyle.rowGap) || 0;
+
+    // Calculate track positions
+    const getTrackPositions = (tracks, gap, start) => {
+      let positions = [start];
+      let currentPosition = start;
+      tracks.forEach((track, index) => {
+        currentPosition += parseFloat(track);
+        if (index < tracks.length - 1) {
+          positions.push(currentPosition);
+          currentPosition += gap;
+          positions.push(currentPosition);
+        }
+      });
+      positions.push(currentPosition);
+      return positions;
+    };
+
+    const columnPositions = getTrackPositions(columnTracks, columnGap, parentRect.left);
+    const rowPositions = getTrackPositions(rowTracks, rowGap, parentRect.top);
+
+    // Draw column gaps
+    for (let i = 1; i < columnPositions.length - 1; i += 2) {
+      const startX = columnPositions[i];
+      const endX = columnPositions[i + 1];
+      if (endX - startX >= minGap) {
+        drawGapRectangle(ctx, startX, parentRect.top, endX - startX, parentRect.height);
+      }
+    }
+
+    // Draw row gaps
+    for (let i = 1; i < rowPositions.length - 1; i += 2) {
+      const startY = rowPositions[i];
+      const endY = rowPositions[i + 1];
+      if (endY - startY >= minGap) {
+        drawGapRectangle(ctx, parentRect.left, startY, parentRect.width, endY - startY);
+      }
+    }
+  };
+
+  const drawGapRectangle = (ctx, x, y, width, height) => {
+    // Darker purple for grid, lighter for flexbox
+    ctx.fillStyle = 'rgba(128, 0, 128, 0.3)';
+    ctx.fillRect(x, y, width, height);
+    drawDottedPattern(ctx, x, x + width, y, y + height);
+  };
+
+  const drawDottedPattern = (ctx, startX, endX, startY, endY) => {
     ctx.fillStyle = 'black';
     const dotSize = 1;
     const dotSpacing = 3;
@@ -309,6 +404,7 @@ function CanvasElementDetector() {
         <h1 className="main-title">Figma-style Element Detector</h1>
         <p className="description">Move your mouse and click to select elements. Select multiple elements to see measurements.</p>
         
+        {/* Existing button container */}
         <div className="button-container">
           <button className="primary-button" onClick={() => alert('selectedElements')}>
             Button 1
@@ -318,6 +414,66 @@ function CanvasElementDetector() {
           </button>
         </div>
         
+        {/* Flexbox Examples */}
+        <h2>Flexbox Examples</h2>
+        <div className="flex-row-container">
+          <div className="flex-item">Flex 1</div>
+          <div className="flex-item">Flex 2</div>
+          <div className="flex-item">Flex 3</div>
+        </div>
+        
+        <div className="flex-column-container">
+          <div className="flex-item">Column 1</div>
+          <div className="flex-item">Column 2</div>
+          <div className="flex-item">Column 3</div>
+        </div>
+        
+        <div className="flex-wrap-container">
+          <div className="flex-wrap-item">Wrap 1</div>
+          <div className="flex-wrap-item">Wrap 2</div>
+          <div className="flex-wrap-item">Wrap 3</div>
+          <div className="flex-wrap-item">Wrap 4</div>
+          <div className="flex-wrap-item">Wrap 5</div>
+        </div>
+        
+        {/* New flexbox example where Wrap 5 doesn't take 100% width */}
+        <div className="flex-wrap-container-partial">
+          <div className="flex-wrap-item">Wrap 1</div>
+          <div className="flex-wrap-item">Wrap 2</div>
+          <div className="flex-wrap-item">Wrap 3</div>
+          <div className="flex-wrap-item">Wrap 4</div>
+          <div className="flex-wrap-item-partial">Wrap 5</div>
+        </div>
+        
+        {/* New Grid examples */}
+        <h2>Grid Examples</h2>
+        <div className="grid-container-2">
+          <div className="grid-item">Grid 1</div>
+          <div className="grid-item">Grid 2</div>
+          <div className="grid-item">Grid 3</div>
+          <div className="grid-item">Grid 4</div>
+        </div>
+        
+        <div className="grid-container-3">
+          <div className="grid-item">A</div>
+          <div className="grid-item">B</div>
+          <div className="grid-item">C</div>
+          <div className="grid-item">D</div>
+          <div className="grid-item">E</div>
+          <div className="grid-item">F</div>
+        </div>
+        
+        {/* New grid example with an item spanning multiple columns */}
+        <div className="grid-container-span">
+          <div className="grid-item">1</div>
+          <div className="grid-item">2</div>
+          <div className="grid-item span-2">3 (Spans 2 columns)</div>
+          <div className="grid-item">4</div>
+          <div className="grid-item">5</div>
+          <div className="grid-item">6</div>
+        </div>
+        
+        {/* Existing grid container */}
         <div className="grid-container">
           <div className="grid-box">Box 1</div>
           <div className="grid-box">Box 2</div>
