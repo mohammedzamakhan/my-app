@@ -60,14 +60,14 @@ function CanvasElementDetector() {
         );
 
         [...flexboxElements, ...gridElements].forEach((element) => {
-          drawBoxModel(ctx, element);
+          // drawBoxModel(ctx, element);
         });
       }
     }
   }, [selectedElements, hoveredElement]);
 
   const drawGuideLines = (ctx, elements) => {
-    ctx.strokeStyle = "rgba(255, 0, 0, 1)"; // Less transparent red
+    ctx.strokeStyle = "rgba(139, 0, 0, 1)"; // dark red
     ctx.setLineDash([2, 2]); // Dashed line
     ctx.lineWidth = 1;
 
@@ -76,24 +76,24 @@ function CanvasElementDetector() {
 
       // Horizontal lines
       ctx.beginPath();
-      ctx.moveTo(0, rect.top);
-      ctx.lineTo(ctx.canvas.width, rect.top);
+      ctx.moveTo(0, Math.floor(rect.top) + 0.5);
+      ctx.lineTo(ctx.canvas.width, Math.floor(rect.top) + 0.5);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(0, rect.bottom);
-      ctx.lineTo(ctx.canvas.width, rect.bottom);
+      ctx.moveTo(0, Math.floor(rect.bottom) + 0.5);
+      ctx.lineTo(ctx.canvas.width, Math.floor(rect.bottom) + 0.5);
       ctx.stroke();
 
       // Vertical lines
       ctx.beginPath();
-      ctx.moveTo(rect.left, 0);
-      ctx.lineTo(rect.left, ctx.canvas.height);
+      ctx.moveTo(Math.floor(rect.left) + 0.5, 0);
+      ctx.lineTo(Math.floor(rect.left) + 0.5, ctx.canvas.height);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(rect.right, 0);
-      ctx.lineTo(rect.right, ctx.canvas.height);
+      ctx.moveTo(Math.floor(rect.right) + 0.5, 0);
+      ctx.lineTo(Math.floor(rect.right) + 0.5, ctx.canvas.height);
       ctx.stroke();
     });
 
@@ -126,36 +126,25 @@ function CanvasElementDetector() {
 
   const drawSingleRect = (ctx, rect) => {
     // Draw main outline
-    ctx.strokeStyle = "#2196F3"; // Figma blue color
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#000"; // Figma blue color
+    ctx.lineWidth = 0.5;
     ctx.setLineDash([]);
     ctx.strokeRect(rect.left, rect.top, rect.width, rect.height);
 
     // Draw corner handles
-    const handleSize = 8;
+    const handleSize = 3; // Smaller handle size
     const corners = [
       { x: rect.left, y: rect.top },
-      { x: rect.right, y: rect.top },
-      { x: rect.left, y: rect.bottom },
-      { x: rect.right, y: rect.bottom },
+      { x: rect.left + rect.width, y: rect.top },
+      { x: rect.left, y: rect.top + rect.height },
+      { x: rect.left + rect.width, y: rect.top + rect.height },
     ];
 
     corners.forEach((corner) => {
-      ctx.fillStyle = "#2196F3";
-      ctx.fillRect(
-        corner.x - handleSize / 2,
-        corner.y - handleSize / 2,
-        handleSize,
-        handleSize
-      );
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(
-        corner.x - handleSize / 2,
-        corner.y - handleSize / 2,
-        handleSize,
-        handleSize
-      );
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(corner.x, corner.y, handleSize / 2, 0, Math.PI * 2);
+      ctx.fill();
     });
   };
 
@@ -324,9 +313,7 @@ function CanvasElementDetector() {
     childRects.sort((a, b) => a.order - b.order);
 
     const drawFlexGap = (x, y, width, height, isDarker = false) => {
-      ctx.fillStyle = isDarker
-        ? "rgba(128, 0, 128, 0.4)"
-        : "rgba(128, 0, 128, 0.3)";
+      ctx.fillStyle = "rgba(128, 0, 128, 0.3)";
       ctx.fillRect(x, y, width, height);
       drawDottedPattern(ctx, x, x + width, y, y + height, false);
     };
@@ -383,12 +370,12 @@ function CanvasElementDetector() {
 
       if (isRow) {
         gap = nextRect.left - currentRect.right;
-        gapStart = parentRect.top;
-        gapEnd = parentRect.bottom;
+        gapStart = Math.min(currentRect.top, nextRect.top);
+        gapEnd = Math.max(currentRect.bottom, nextRect.bottom);
       } else {
         gap = nextRect.top - currentRect.bottom;
-        gapStart = parentRect.left;
-        gapEnd = parentRect.right;
+        gapStart = Math.min(currentRect.left, nextRect.left);
+        gapEnd = Math.max(currentRect.right, nextRect.right);
       }
 
       if (gap >= minGap) {
@@ -408,12 +395,12 @@ function CanvasElementDetector() {
 
     if (isRow) {
       endGap = parentRect.right - lastRect.right;
-      gapStart = parentRect.top;
-      gapEnd = parentRect.bottom;
+      gapStart = lastRect.top;
+      gapEnd = lastRect.bottom;
     } else {
       endGap = parentRect.bottom - lastRect.bottom;
-      gapStart = parentRect.left;
-      gapEnd = parentRect.right;
+      gapStart = lastRect.left;
+      gapEnd = lastRect.right;
     }
 
     if (endGap >= minGap) {
