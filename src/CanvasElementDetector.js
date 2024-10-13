@@ -201,7 +201,8 @@ function CanvasElementDetector() {
           left: rect.left - parseInt(styles.marginLeft),
           right: rect.right + parseInt(styles.marginRight),
           top: rect.top - parseInt(styles.marginTop),
-          bottom: rect.bottom + parseInt(styles.marginBottom)
+          bottom: rect.bottom + parseInt(styles.marginBottom),
+          width: rect.width + parseInt(styles.marginLeft) + parseInt(styles.marginRight)
         };
       });
       
@@ -215,26 +216,35 @@ function CanvasElementDetector() {
       const parentPaddingBottom = parseInt(parentStyles.paddingBottom);
       
       const minGap = 1; // Minimum gap size to draw (in pixels)
+      const parentContentWidth = parentRect.width - parentPaddingLeft - parentPaddingRight;
 
-      for (let i = 0; i <= childRects.length; i++) {
-        let startX, endX;
-        
-        if (i === 0) {
-          startX = parentRect.left + parentPaddingLeft;
-          endX = childRects[0].left;
-        } else if (i === childRects.length) {
-          startX = childRects[i - 1].right;
-          endX = parentRect.right - parentPaddingRight;
-        } else {
-          startX = childRects[i - 1].right;
-          endX = childRects[i].left;
-        }
-        
-        if (endX - startX >= minGap) {
-          drawDashedLines(ctx, startX, endX, 
-            parentRect.top + parentPaddingTop, 
-            parentRect.bottom - parentPaddingBottom
-          );
+      let totalChildWidth = 0;
+      childRects.forEach(rect => {
+        totalChildWidth += rect.width;
+      });
+
+      // Only draw dashed lines if there's actually space between children
+      if (totalChildWidth < parentContentWidth) {
+        for (let i = 0; i <= childRects.length; i++) {
+          let startX, endX;
+          
+          if (i === 0) {
+            startX = parentRect.left + parentPaddingLeft;
+            endX = childRects[0].left;
+          } else if (i === childRects.length) {
+            startX = childRects[i - 1].right;
+            endX = parentRect.right - parentPaddingRight;
+          } else {
+            startX = childRects[i - 1].right;
+            endX = childRects[i].left;
+          }
+          
+          if (endX - startX >= minGap) {
+            drawDashedLines(ctx, startX, endX, 
+              parentRect.top + parentPaddingTop, 
+              parentRect.bottom - parentPaddingBottom
+            );
+          }
         }
       }
     }
